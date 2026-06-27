@@ -21,6 +21,9 @@ async def handle(request):
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer(
+        "Hi! Send the photo.\n\n"
+        "⚠️ To preserve full resolution, send it as a *file*. "
+        "(📎paperclip → 📄File), rather than as a regular photo.\n\n"
         "Привет! Пришли фото.\n\n"
         "⚠️ Чтобы сохранить полное разрешение — отправляй как *файл* "
         "(📎скрепка → 📄Файл), а не как обычное фото.",
@@ -28,7 +31,7 @@ async def cmd_start(message: types.Message):
     )
 
 async def process_image(message: types.Message, file_id: str, filename: str):
-    await message.answer("⏳ Обрабатываю... ~30–60 сек.")
+    await message.answer("⏳ Processing... / Обрабатываю... ~30–60 sec.")
 
     local_input = f"input_{file_id}.jpg"
     local_output = f"output_{file_id}.jpg"
@@ -57,7 +60,7 @@ async def process_image(message: types.Message, file_id: str, filename: str):
 
     except Exception as e:
         logging.error(f"Ошибка: {e}")
-        await message.answer(f"❌ Ошибка: {e}")
+        await message.answer(f"❌ Error / Ошибка: {e}")
 
     finally:
         for f in [local_input, local_output]:
