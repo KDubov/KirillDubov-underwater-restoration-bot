@@ -45,7 +45,7 @@ async def handle_root(request):
 async def process_image(message: types.Message, file_id: str, original_filename: str):
     user = message.from_user
     log_to_sheet(user.id, user.full_name, original_filename)
-    await message.answer("⏳Обрабатываю... ~30–60 сек")
+    await message.answer("⏳ Обрабатываю... ~30–60 сек")
     
     unique_id = uuid.uuid4().hex
     local_input = f"input_{unique_id}.jpg"
@@ -57,10 +57,10 @@ async def process_image(message: types.Message, file_id: str, original_filename:
         result_path = client.predict(handle_file(local_input), 512, api_name="/enhance")
         shutil.copy(result_path, local_output)
         
-        # Теперь файл будет иметь уникальное имя для каждого пользователя
-        output_filename = f"enhanced_{original_filename}"
+        # Используем уникальное имя с префиксом
+        final_name = f"enhanced_{original_filename}"
         await message.answer_document(
-            types.FSInputFile(local_output, filename=output_filename),
+            types.FSInputFile(local_output, filename=final_name),
             caption="✅ Готово!"
         )
     finally:
@@ -76,7 +76,7 @@ async def cmd_start(message: types.Message):
         parse_mode="Markdown"
     )
 
-# Обработка альбомов (Media Groups)
+# Обработка альбомов
 @dp.message(F.media_group_id)
 async def handle_media_group(message: types.Message):
     await message.answer(
@@ -86,13 +86,17 @@ async def handle_media_group(message: types.Message):
     
 @dp.message(F.document)
 async def handle_document(message: types.Message):
-    await process_image(message, message.document.file_id, message.document.file_name or "photo.jpg")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    original_name = message.document.file_name or "photo.jpg"
+    name, ext = os.path.splitext(original_name)
+    unique_filename = f"{name}_{timestamp}{ext}"
+    await process_image(message, message.document.file_id, unique_filename)
 
 @dp.message(F.photo)
 async def handle_photo(message: types.Message):
-    await message.answer("📷 Получил фото, но Telegram его сжал. Для лучшего качества отправляй как файл (📎).")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     photo = message.photo[-1]
-    await process_image(message, photo.file_id, "photo.jpg")
+    await process_image(message, photo.file_id, f"photo_{timestamp}.jpg")
 
 async def on_startup(bot: Bot):
     await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
