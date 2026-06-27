@@ -2,7 +2,8 @@ import uuid
 import os
 from aiogram import F
 from aiogram.types import Message, FSInputFile
-from gradio_client import Client, handle_file
+from gradio_client import Client
+from PIL import Image
 
 from config import HF_SPACE
 
@@ -25,6 +26,7 @@ def setup_handlers(dp, bot, logger):
     @dp.message(F.document)
     async def photo(message: Message):
         try:
+            # --- проверка ---
             if not message.document.mime_type.startswith("image/"):
                 await message.answer("Отправь изображение как файл 📎")
                 return
@@ -37,16 +39,18 @@ def setup_handlers(dp, bot, logger):
             path = f"/tmp/{uuid.uuid4()}.jpg"
             await bot.download_file(file.file_path, destination=path)
 
-            # --- защита ---
             if not os.path.exists(path):
                 await message.answer("Ошибка: файл не сохранён локально")
                 return
 
+            # --- PIL IMAGE MODE (ВАЖНО) ---
+            image = Image.open(path).convert("RGB")
+
+            # --- HF Space ---
             client = Client(HF_SPACE)
 
-            # 🔥 ЕДИНСТВЕННО ПРАВИЛЬНЫЙ СПОСОБ ДЛЯ IMAGE DATA SPACE
             result = client.predict(
-                handle_file(path),
+                image,
                 api_name="/enhance"
             )
 
@@ -59,11 +63,15 @@ def setup_handlers(dp, bot, logger):
             if isinstance(result, dict):
                 result = result.get("path") or result.get("image")
 
-            if not result or not os.path.exists(result):
-                await message.answer(f"Ошибка: некорректный результат\n{result}")
+            if not result:
+                await message.answer(f"Ошибка: пустой результат\n{result}")
                 return
 
-            # --- отправка без потери качества ---
+            if not os.path.exists(result):
+                await message.answer(f"Ошибка: файл не найден\n{result}")
+                return
+
+            # --- отправка результата ---
             await message.answer_photo(FSInputFile(result))
 
         except Exception as e:
