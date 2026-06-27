@@ -1,6 +1,5 @@
-import asyncio
-import logging
 import os
+import logging
 
 from aiohttp import web
 from aiogram import Bot, Dispatcher
@@ -13,39 +12,27 @@ WEBHOOK_PATH = "/webhook"
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 
-async def on_startup(bot: Bot):
-    await bot.set_webhook(WEBHOOK_URL + WEBHOOK_PATH)
-    print("Webhook set:", WEBHOOK_URL + WEBHOOK_PATH)
-
-
-async def on_shutdown(bot: Bot):
-    await bot.delete_webhook()
-
-
 def main():
     logging.basicConfig(level=logging.INFO)
 
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
 
-    # регистрация хендлеров
     setup_handlers(dp, bot, logging.getLogger(__name__))
 
     app = web.Application()
 
-    SimpleRequestHandler(
-        dispatcher=dp,
-        bot=bot,
-    ).register(app, path=WEBHOOK_PATH)
-
+    SimpleRequestHandler(dp, bot).register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
 
-    app.on_startup.append(lambda app: on_startup(bot))
-    app.on_shutdown.append(lambda app: on_shutdown(bot))
+    async def on_startup(app):
+        await bot.set_webhook(WEBHOOK_URL + WEBHOOK_PATH)
+        print("Webhook:", WEBHOOK_URL + WEBHOOK_PATH)
+
+    app.on_startup.append(on_startup)
 
     return app
 
 
 if __name__ == "__main__":
-    app = main()
-    web.run_app(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    web.run_app(main(), host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
