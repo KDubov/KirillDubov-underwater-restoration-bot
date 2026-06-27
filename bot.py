@@ -5,6 +5,7 @@ from aiogram.filters import Command
 from gradio_client import Client
 import asyncio
 from aiohttp import web
+from PIL import Image
 
 # Твой токен (можно вписать сюда напрямую, если переменные окружения капризничают)
 BOT_TOKEN = "8988124989:AAH7OYAeyPXW_F0LH0Y-f2L1kFMZdtRcduA"
@@ -37,10 +38,16 @@ async def handle_photo(message: types.Message):
     await bot.download_file(file.file_path, local_filename)
     
     try:
-        # Отправляем фото в твой Space
-        result = client.predict(local_filename, api_name="/enhance")
+        # ОТКРЫВАЕМ фото как объект PIL, который понимает Gradio
+        with Image.open(local_filename) as img:
+            # Передаем объект изображения и параметр tile_size=512
+            result = client.predict(img, 512, api_name="/enhance")
+        
+        # Gradio возвращает путь к файлу результата, отправляем его
         await message.answer_document(types.FSInputFile(result))
     except Exception as e:
+        # Добавим вывод ошибки в логи, чтобы было проще отлаживать
+        logging.error(f"Ошибка обработки: {e}")
         await message.answer(f"Ошибка при обработке: {e}")
 
 async def main():
