@@ -9,7 +9,6 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 from config import BOT_TOKEN
 from handlers.photo import setup_handlers
 
-
 WEBHOOK_PATH = "/webhook"
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
@@ -29,7 +28,7 @@ def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
 
-    # регистрируем хендлеры
+    # регистрация хендлеров
     setup_handlers(dp, bot, logging.getLogger(__name__))
 
     app = web.Application()
