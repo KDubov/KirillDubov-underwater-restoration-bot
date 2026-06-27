@@ -1,4 +1,5 @@
 aiogram
-gradio_client
-pillow
 aiohttp
+gradio_client
+gspread
+oauth2client
