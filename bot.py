@@ -56,7 +56,13 @@ async def process_image(message: types.Message, file_id: str, original_filename:
         await bot.download_file(file.file_path, local_input)
         result_path = client.predict(handle_file(local_input), 512, api_name="/enhance")
         shutil.copy(result_path, local_output)
-        await message.answer_document(types.FSInputFile(local_output, filename="enhanced.jpg"))
+        
+        # Теперь файл будет иметь уникальное имя для каждого пользователя
+        output_filename = f"enhanced_{original_filename}"
+        await message.answer_document(
+            types.FSInputFile(local_output, filename=output_filename),
+            caption="✅ Готово!"
+        )
     finally:
         for f in [local_input, local_output]:
             if os.path.exists(f): os.remove(f)
