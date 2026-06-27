@@ -19,6 +19,7 @@ SPACE_URL = "https://kirilldubov-underwater-restoration.hf.space"
 RENDER_URL = os.environ.get("RENDER_EXTERNAL_URL")
 WEBHOOK_PATH = "/webhook"
 WEBHOOK_URL = f"{RENDER_URL}{WEBHOOK_PATH}"
+ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID") 
 
 # Инициализация
 logging.basicConfig(level=logging.INFO)
@@ -45,7 +46,9 @@ async def handle_root(request):
 async def process_image(message: types.Message, file_id: str, original_filename: str):
     user = message.from_user
     log_to_sheet(user.id, user.full_name, original_filename)
-    await message.answer("⏳ Обрабатываю... ~30–60 сек")
+    
+    # Отправляем статус и сохраняем его ID для последующего удаления
+    status_msg = await message.answer("⏳ Обрабатываю... ~30–60 сек")
     
     unique_id = uuid.uuid4().hex
     local_input = f"input_{unique_id}.jpg"
@@ -57,12 +60,24 @@ async def process_image(message: types.Message, file_id: str, original_filename:
         result_path = client.predict(handle_file(local_input), 512, api_name="/enhance")
         shutil.copy(result_path, local_output)
         
-        # Используем уникальное имя с префиксом
         final_name = f"enhanced_{original_filename}"
         await message.answer_document(
             types.FSInputFile(local_output, filename=final_name),
             caption="✅ Готово!"
         )
+        
+        # Удаляем сообщение с индикатором прогресса для чистоты чата
+        await bot.delete_message(chat_id=message.chat.id, message_id=status_msg.message_id)
+        
+    except Exception as e:
+        logging.error(f"Ошибка обработки: {e}")
+        # Оповещаем администратора об ошибке
+        if os.environ.get("ADMIN_CHAT_ID"):
+            await bot.send_message(
+                os.environ.get("ADMIN_CHAT_ID"), 
+                f"⚠️ **Ошибка у пользователя {user.full_name} (@{user.username}):**\n{str(e)}"
+            )
+        await message.answer("❌ Произошла ошибка при обработке фото. Попробуй позже.")
     finally:
         for f in [local_input, local_output]:
             if os.path.exists(f): os.remove(f)
@@ -75,6 +90,28 @@ async def cmd_start(message: types.Message):
         "(📎скрепка → 📄Файл), а не как обычное фото.",
         parse_mode="Markdown"
     )
+@dp.message(Command("getid"))
+async def get_id(message: types.Message):
+    await message.answer(f"ID этого чата: {message.chat.id}")
+
+@dp.message(Command("feedback"))
+async def feedback_start(message: types.Message):
+    await message.answer("Пришли текст отзыва или жалобы в следующем сообщении.")
+
+@dp.message(F.text, ~F.text.startswith("/"))
+async def process_feedback(message: types.Message):
+    if ADMIN_CHAT_ID:
+        await bot.send_message(
+            ADMIN_CHAT_ID, 
+            f"📩 **Новый отзыв!**\n\nОт: {message.from_user.full_name} (@{message.from_user.username})\nID: {message.from_user.id}\n\nТекст: {message.text}"
+        )
+        await message.answer("✅ Спасибо! Твой отзыв отправлен разработчику.")
+
+@dp.message(Command("stats"))
+async def cmd_stats(message: types.Message):
+    # Тут можно считать количество строк в Google Sheets
+    count = len(sheet.get_all_values()) - 1 
+    await message.answer(f"📊 Всего обработано фото: {count}")
 
 # Обработка альбомов
 @dp.message(F.media_group_id)
