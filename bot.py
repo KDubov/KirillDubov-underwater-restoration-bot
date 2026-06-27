@@ -55,7 +55,7 @@ async def process_image(message: types.Message, file_id: str, filename: str):
 
         await message.answer_document(
             types.FSInputFile(local_output, filename="enhanced.jpg"),
-            caption="✅ Готово!"
+            caption="✅ Done / Готово!"
         )
 
     except Exception as e:
