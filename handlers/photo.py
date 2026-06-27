@@ -2,7 +2,7 @@ import uuid
 import os
 from aiogram import F
 from aiogram.types import Message, FSInputFile
-from gradio_client import Client
+from gradio_client import Client, handle_file
 
 from config import HF_SPACE
 
@@ -31,39 +31,39 @@ def setup_handlers(dp, bot, logger):
 
             await message.answer("Обрабатываю фото...")
 
-            # --- скачивание файла (RAW ORIGINAL) ---
+            # --- скачивание оригинального файла ---
             file = await bot.get_file(message.document.file_id)
 
             path = f"/tmp/{uuid.uuid4()}.jpg"
             await bot.download_file(file.file_path, destination=path)
 
-            # --- жёсткие проверки (защита от скрытых багов) ---
-            assert isinstance(path, str)
-            assert os.path.exists(path)
+            # --- защита ---
+            if not os.path.exists(path):
+                await message.answer("Ошибка: файл не сохранён локально")
+                return
 
-            # --- HF Space ---
             client = Client(HF_SPACE)
 
-            # 🔥 ВАЖНО: ТОЛЬКО RAW PATH (никаких handle_file / PIL)
+            # 🔥 ЕДИНСТВЕННО ПРАВИЛЬНЫЙ СПОСОБ ДЛЯ IMAGE DATA SPACE
             result = client.predict(
-                path,
+                handle_file(path),
                 api_name="/enhance"
             )
 
             await message.answer("Готово ✔ отправляю результат...")
 
             # --- нормализация результата ---
-            if isinstance(result, dict):
-                result = result.get("path") or result.get("image")
-
             if isinstance(result, (tuple, list)):
                 result = result[0]
 
+            if isinstance(result, dict):
+                result = result.get("path") or result.get("image")
+
             if not result or not os.path.exists(result):
-                await message.answer(f"Ошибка: пустой или неверный результат\n{result}")
+                await message.answer(f"Ошибка: некорректный результат\n{result}")
                 return
 
-            # --- отправка результата без потерь ---
+            # --- отправка без потери качества ---
             await message.answer_photo(FSInputFile(result))
 
         except Exception as e:
