@@ -45,7 +45,7 @@ async def handle_root(request):
 async def process_image(message: types.Message, file_id: str, original_filename: str):
     user = message.from_user
     log_to_sheet(user.id, user.full_name, original_filename)
-    await message.answer("⏳ Processing...")
+    await message.answer("⏳Обрабатываю... ~30–60 сек")
     
     unique_id = uuid.uuid4().hex
     local_input = f"input_{unique_id}.jpg"
@@ -63,8 +63,12 @@ async def process_image(message: types.Message, file_id: str, original_filename:
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("Hi! Send a photo as a FILE for full resolution.")
-
+    await message.answer(
+        "Привет! Пришли фото.\n\n"
+        "⚠️ Чтобы сохранить полное разрешение — отправляй как *файл* "
+        "(📎скрепка → 📄Файл), а не как обычное фото.",
+        parse_mode="Markdown"
+    )
 @dp.message(F.document)
 async def handle_document(message: types.Message):
     await process_image(message, message.document.file_id, message.document.file_name or "photo.jpg")
