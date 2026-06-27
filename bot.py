@@ -7,7 +7,7 @@ import asyncio
 
 # Используем переменные окружения для безопасности
 # (Ты их укажешь позже в настройках Render)
-BOT_TOKEN = os.getenv("8988124989:AAH7OYAeyPXW_F0LH0Y-f2L1kFMZdtRcduA")
+BOT_TOKEN = "8988124989:AAH7OYAeyPXW_F0LH0Y-f2L1kFMZdtRcduA"
 SPACE_URL = "https://huggingface.co/spaces/KirillDubov/underwater-restoration" 
 
 logging.basicConfig(level=logging.INFO)
