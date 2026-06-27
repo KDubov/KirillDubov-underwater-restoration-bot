@@ -1,14 +1,10 @@
 from aiogram import Router
-from aiogram.filters import CommandStart
+from aiogram.filters import Command
 from aiogram.types import Message
 
 router = Router()
 
 
-@router.message(CommandStart())
-async def start(message: Message):
-
-    await message.answer(
-        "🌊 <b>Добро пожаловать в SeaClear AI!</b>\n\n"
-        "Пришлите подводную фотографию, и я автоматически восстановлю её цвета."
-    )
+@router.message(Command("start"))
+async def start_handler(message: Message):
+    await message.answer("Привет! Отправь фото для обработки")
