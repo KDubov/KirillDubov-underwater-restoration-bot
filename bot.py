@@ -34,6 +34,12 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 gs_client = gspread.authorize(creds)
 sheet = gs_client.open_by_key("1OUxcrDV2cvheOqv__7Y9h_soHuqt7zsf3k91Qg38c5E").sheet1
 
+# Тестовая команда, чтобы проверить, работает ли код
+@dp.message(Command("ping"))
+async def ping(message: types.Message):
+    await message.answer("pong! Бот работает, команды обновлены.")
+# Конец тестовой команды
+
 def log_to_sheet(user_id, username, filename):
     try:
         sheet.append_row([str(datetime.now()), str(user_id), str(username), str(filename)])
