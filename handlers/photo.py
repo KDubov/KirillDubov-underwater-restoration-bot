@@ -2,7 +2,7 @@ import uuid
 import os
 from aiogram import F
 from aiogram.types import Message, FSInputFile
-from gradio_client import Client, handle_file
+from gradio_client import Client
 
 from config import HF_SPACE
 
@@ -31,30 +31,39 @@ def setup_handlers(dp, bot, logger):
 
             await message.answer("Обрабатываю фото...")
 
+            # --- скачивание файла (RAW ORIGINAL) ---
             file = await bot.get_file(message.document.file_id)
 
-            path = f"/tmp/{uuid.uuid4()}"
+            path = f"/tmp/{uuid.uuid4()}.jpg"
             await bot.download_file(file.file_path, destination=path)
 
+            # --- жёсткие проверки (защита от скрытых багов) ---
+            assert isinstance(path, str)
+            assert os.path.exists(path)
+
+            # --- HF Space ---
             client = Client(HF_SPACE)
 
+            # 🔥 ВАЖНО: ТОЛЬКО RAW PATH (никаких handle_file / PIL)
             result = client.predict(
-                handle_file(path),
+                path,
                 api_name="/enhance"
             )
 
             await message.answer("Готово ✔ отправляю результат...")
 
+            # --- нормализация результата ---
             if isinstance(result, dict):
                 result = result.get("path") or result.get("image")
 
             if isinstance(result, (tuple, list)):
                 result = result[0]
 
-            if not result:
-                await message.answer(f"Ошибка: пустой результат\n{result}")
+            if not result or not os.path.exists(result):
+                await message.answer(f"Ошибка: пустой или неверный результат\n{result}")
                 return
 
+            # --- отправка результата без потерь ---
             await message.answer_photo(FSInputFile(result))
 
         except Exception as e:
