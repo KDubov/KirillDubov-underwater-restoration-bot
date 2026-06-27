@@ -38,7 +38,7 @@ async def handle_photo(message: types.Message):
     
     try:
         # Отправляем фото в твой Space
-        result = client.predict(local_filename, api_name="/predict")
+        result = client.predict(local_filename, api_name="/enhance")
         await message.answer_document(types.FSInputFile(result))
     except Exception as e:
         await message.answer(f"Ошибка при обработке: {e}")
