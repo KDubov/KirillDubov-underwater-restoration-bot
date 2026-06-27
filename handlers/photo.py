@@ -2,7 +2,7 @@ import uuid
 from aiogram import F
 from aiogram.types import Message
 from gradio_client import Client, handle_file
-
+from aiogram.types import FSInputFile
 from config import HF_SPACE
 
 
@@ -34,7 +34,7 @@ def setup_handlers(dp, bot, logger):
             await message.answer("Готово ✔ отправляю результат...")
 
             # result = путь к файлу
-            await message.answer_photo(result)
+            await message.answer_photo(FSInputFile(result))
 
         except Exception as e:
             await message.answer(f"Ошибка: {e}")
