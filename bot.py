@@ -7,7 +7,7 @@ from aiogram.filters import Command
 from aiohttp import web
 from gradio_client import Client, handle_file
 
-BOT_TOKEN = "8988124989:AAH7OYAeyPXW_F0LH0Y-f2L1kFMZdtRcduA"
+BOT_TOKEN = "8988124989:AAHVEiW7G1y4kQBBRSSyWexTFbGJqrBLU1w"
 SPACE_URL = "https://kirilldubov-underwater-restoration.hf.space"
 
 logging.basicConfig(level=logging.INFO)
