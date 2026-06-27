@@ -6,6 +6,7 @@ from gradio_client import Client
 import asyncio
 from aiohttp import web
 from PIL import Image
+from gradio_client import Client, handle_file
 
 # Твой токен (можно вписать сюда напрямую, если переменные окружения капризничают)
 BOT_TOKEN = "8988124989:AAH7OYAeyPXW_F0LH0Y-f2L1kFMZdtRcduA"
@@ -38,13 +39,12 @@ async def handle_photo(message: types.Message):
     await bot.download_file(file.file_path, local_filename)
     
     try:
-        # Открываем изображение как объект PIL
-        with Image.open(local_filename) as img:
-            # Превращаем его в RGB, чтобы не было проблем с форматами (например, PNG с прозрачностью)
-            img = img.convert("RGB")
-            
-            # Передаем ОБЪЕКТ изображения (img), а не строку 'input.jpg'
-            result = client.predict(img, 512, api_name="/enhance")
+        # Передаем файл через handle_file — это создаст правильную ссылку
+        result = client.predict(
+            handle_file(local_filename), 
+            512, 
+            api_name="/enhance"
+        )
         
         # Отправляем результат
         await message.answer_document(types.FSInputFile(result))
