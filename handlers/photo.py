@@ -3,7 +3,7 @@ import os
 from aiogram import F
 from aiogram.types import Message, FSInputFile
 from gradio_client import Client
-
+from PIL import Image
 from config import HF_SPACE
 
 
@@ -43,8 +43,9 @@ def setup_handlers(dp, bot, logger):
             # --- HF Space ---
             client = Client(HF_SPACE)
 
+            image = Image.open(path)
             result = client.predict(
-                path,              # ❗ ВАЖНО: без handle_file
+                image,
                 api_name="/enhance"
             )
 
