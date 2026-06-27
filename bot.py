@@ -10,7 +10,9 @@ from aiohttp import web
 from gradio_client import Client, handle_file
 
 # Конфигурация
-BOT_TOKEN = "8988124989:AAHVEiW7G1y4kQBBRSSyWexTFbGJqrBLU1w"
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+if not BOT_TOKEN:
+    raise ValueError("Переменная окружения BOT_TOKEN не задана!")
 SPACE_URL = "https://kirilldubov-underwater-restoration.hf.space"
 RENDER_URL = os.environ.get("RENDER_EXTERNAL_URL")
 WEBHOOK_PATH = "/webhook"
