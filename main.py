@@ -6,7 +6,9 @@ from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from handlers.photo import setup_handlers
-from handlers.start import setup_start
+from handlers.start import router as start_router
+
+dp.include_router(start_router)
 
 from config import BOT_TOKEN
 from photo import setup_handlers
