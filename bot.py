@@ -138,6 +138,10 @@ async def handle_photo(message: types.Message):
 async def on_startup(bot: Bot):
     await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
 
+@dp.message(Command("getid"))
+async def get_id(message: types.Message):
+    await message.answer(f"ID этого чата: {message.chat.id}")
+
 async def main():
     app = web.Application()
     app.router.add_get("/", handle_root)
