@@ -21,9 +21,9 @@ async def handle(request):
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer(
-        "Привет! Пришли подводное фото.\n\n"
+        "Привет! Пришли фото.\n\n"
         "⚠️ Чтобы сохранить полное разрешение — отправляй как *файл* "
-        "(скрепка → Файл), а не как обычное фото.",
+        "(📎скрепка → 📄Файл), а не как обычное фото.",
         parse_mode="Markdown"
     )
 
@@ -52,7 +52,7 @@ async def process_image(message: types.Message, file_id: str, filename: str):
 
         await message.answer_document(
             types.FSInputFile(local_output, filename="enhanced.jpg"),
-            caption="✅ Готово! Файл в оригинальном разрешении."
+            caption="✅ Готово!"
         )
 
     except Exception as e:
