@@ -37,23 +37,30 @@ async def handle_photo(message: types.Message):
     await bot.download_file(file.file_path, local_filename)
     
     try:
-        # Отправляем путь к файлу через handle_file
-        # Gradio вернет путь к обработанному файлу
-        result_path = client.predict(
+        # Получаем результат как словарь/объект
+        result = client.predict(
             handle_file(local_filename), 
             512, 
             api_name="/enhance"
         )
         
-        # Отправляем документ для сохранения оригинального качества
+        # Если result — это путь (строка), значит, это то, что нам нужно
+        # Но чтобы гарантированно избежать сжатия Gradio, 
+        # давай убедимся, что мы берем файл напрямую с диска Space
+        if isinstance(result, str):
+            result_path = result
+        else:
+            # Если Gradio вернул сложный объект, пробуем достать путь
+            result_path = str(result)
+            
+        logging.info(f"DEBUG: Путь к результату: {result_path}")
+
+        # Отправляем файл
         await message.answer_document(types.FSInputFile(result_path))
+        
     except Exception as e:
         logging.error(f"Ошибка: {e}")
-        await message.answer(f"Ошибка при обработке: {e}")
-    finally:
-        # Удаляем локальный файл, чтобы не засорять диск
-        if os.path.exists(local_filename):
-            os.remove(local_filename)
+        await message.answer("Ошибка при обработке. Попробуй другое фото.")
 
 async def main():
     # Запуск веб-сервера
