@@ -2,20 +2,16 @@ import asyncio
 import logging
 import os
 
+from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
-from aiohttp import web
-from handlers.photo import setup_handlers
-from handlers.start import router as start_router
-
-dp.include_router(start_router)
 
 from config import BOT_TOKEN
-from photo import setup_handlers
+from handlers.photo import setup_handlers
 
 
 WEBHOOK_PATH = "/webhook"
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Render URL
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 
 async def on_startup(bot: Bot):
@@ -25,7 +21,6 @@ async def on_startup(bot: Bot):
 
 async def on_shutdown(bot: Bot):
     await bot.delete_webhook()
-    print("Webhook deleted")
 
 
 def main():
@@ -34,6 +29,7 @@ def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
 
+    # регистрируем хендлеры
     setup_handlers(dp, bot, logging.getLogger(__name__))
 
     app = web.Application()
