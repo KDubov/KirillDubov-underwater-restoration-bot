@@ -75,9 +75,24 @@ async def cmd_start(message: types.Message):
         "(📎скрепка → 📄Файл), а не как обычное фото.",
         parse_mode="Markdown"
     )
+
+# Обработка альбомов (Media Groups)
+@dp.message(F.media_group_id)
+async def handle_media_group(message: types.Message):
+    await message.answer(
+        "⚠️ Пожалуйста, присылай фотографии **по одной**, чтобы я смог качественно их восстановить.",
+        parse_mode="Markdown"
+    )
+    
 @dp.message(F.document)
 async def handle_document(message: types.Message):
     await process_image(message, message.document.file_id, message.document.file_name or "photo.jpg")
+
+@dp.message(F.photo)
+async def handle_photo(message: types.Message):
+    await message.answer("📷 Получил фото, но Telegram его сжал. Для лучшего качества отправляй как файл (📎).")
+    photo = message.photo[-1]
+    await process_image(message, photo.file_id, "photo.jpg")
 
 async def on_startup(bot: Bot):
     await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
