@@ -88,6 +88,7 @@ async def handle_photo(message: types.Message):
     await process_image(message, photo.file_id, "photo.jpg")
 
 async def main():
+    await bot.delete_webhook(drop_pending_updates=True)
     app = web.Application()
     app.add_routes([web.get('/', handle)])
     runner = web.AppRunner(app)
