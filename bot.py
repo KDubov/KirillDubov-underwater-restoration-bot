@@ -38,11 +38,15 @@ async def handle_photo(message: types.Message):
     await bot.download_file(file.file_path, local_filename)
     
     try:
-        # Передаем путь к файлу, а не объект PIL
-        # Gradio сам откроет этот файл на сервере Hugging Face
-        result = client.predict(local_filename, 512, api_name="/enhance")
+        # Открываем изображение как объект PIL
+        with Image.open(local_filename) as img:
+            # Превращаем его в RGB, чтобы не было проблем с форматами (например, PNG с прозрачностью)
+            img = img.convert("RGB")
+            
+            # Передаем ОБЪЕКТ изображения (img), а не строку 'input.jpg'
+            result = client.predict(img, 512, api_name="/enhance")
         
-        # Если result — это путь к временному файлу, скачиваем его или отправляем
+        # Отправляем результат
         await message.answer_document(types.FSInputFile(result))
     except Exception as e:
         await message.answer(f"Ошибка при обработке: {e}")
