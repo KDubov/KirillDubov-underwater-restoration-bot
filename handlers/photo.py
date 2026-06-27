@@ -28,9 +28,9 @@ def setup_handlers(dp, bot, logger):
 
             # --- подключаем HF Space ---
             client = Client(HF_SPACE)
-
+          
             result = client.predict(
-                handle_file(path),
+                path,
                 api_name="/enhance"
             )
 
