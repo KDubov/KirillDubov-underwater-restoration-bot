@@ -1,18 +1,17 @@
-from aiogram import F
-from aiogram.types import Message, FSInputFile
 import os
 import uuid
-from PIL import Image, ImageEnhance
+from aiogram import F
+from aiogram.types import Message
+from gradio_client import Client
 
-TEMP_DIR = "temp"
-os.makedirs(TEMP_DIR, exist_ok=True)
+from config import HF_SPACE
 
 
 def setup_handlers(dp, bot, logger):
 
     @dp.message(F.text == "/start")
     async def start(message: Message):
-        await message.answer("Бот запущен ✔ Отправь фото для обработки.")
+        await message.answer("Отправь фото")
 
     @dp.message(F.photo)
     async def handle_photo(message: Message):
@@ -20,21 +19,21 @@ def setup_handlers(dp, bot, logger):
             photo = message.photo[-1]
             file = await bot.get_file(photo.file_id)
 
-            filename = f"{uuid.uuid4()}.jpg"
-            path = os.path.join(TEMP_DIR, filename)
-
+            path = f"/tmp/{uuid.uuid4()}.jpg"
             await bot.download_file(file.file_path, destination=path)
 
-            # простая обработка
-            img = Image.open(path).convert("RGB")
-            img = ImageEnhance.Contrast(img).enhance(1.3)
-            img = ImageEnhance.Color(img).enhance(1.4)
+            # 🔥 HuggingFace Space client
+            client = Client(HF_SPACE)
 
-            out_path = path.replace(".jpg", "_out.jpg")
-            img.save(out_path)
+            # ⚠️ ВАЖНО: это стандартный /predict
+            result = client.predict(path, api_name="/predict")
 
-            await message.answer_photo(FSInputFile(out_path))
+            # result обычно = путь к файлу
+            if isinstance(result, str) and os.path.exists(result):
+                await message.answer_photo(result)
+            else:
+                await message.answer(f"HF response: {result}")
 
         except Exception as e:
-            logger.error(f"Photo error: {e}")
-            await message.answer("Ошибка обработки фото ❌")
+            logger.error(e)
+            await message.answer("Ошибка обработки")
