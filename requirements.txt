@@ -1,0 +1,3 @@
+aiogram
+gradio_client
+pillow
