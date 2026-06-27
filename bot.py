@@ -1,6 +1,7 @@
 import logging
 import os
 import asyncio
+import aiohttp
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiohttp import web
@@ -37,30 +38,32 @@ async def handle_photo(message: types.Message):
     await bot.download_file(file.file_path, local_filename)
     
     try:
-        # Получаем результат как словарь/объект
-        result = client.predict(
-            handle_file(local_filename), 
-            512, 
-            api_name="/enhance"
-        )
+        # 1. Получаем путь к файлу от Gradio
+        result_path = client.predict(handle_file(local_filename), 512, api_name="/enhance")
         
-        # Если result — это путь (строка), значит, это то, что нам нужно
-        # Но чтобы гарантированно избежать сжатия Gradio, 
-        # давай убедимся, что мы берем файл напрямую с диска Space
-        if isinstance(result, str):
-            result_path = result
-        else:
-            # Если Gradio вернул сложный объект, пробуем достать путь
-            result_path = str(result)
-            
-        logging.info(f"DEBUG: Путь к результату: {result_path}")
+        # 2. Скачиваем файл напрямую через aiohttp
+        # Gradio возвращает путь, нам нужно получить к нему доступ. 
+        # Если это локальный путь, мы можем его прочитать. 
+        # Если удаленный — скачиваем через url.
+        
+        # В большинстве случаев на HuggingFace Space результат доступен по прямой ссылке:
+        file_url = f"{SPACE_URL}/file={result_path}"
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(file_url) as resp:
+                if resp.status == 200:
+                    data = await resp.read()
+                    with open("final_result.jpg", "wb") as f:
+                        f.write(data)
+                    
+                    # 3. Отправляем фото
+                    await message.answer_document(types.FSInputFile("final_result.jpg"))
+                else:
+                    await message.answer("Ошибка скачивания файла с сервера.")
 
-        # Отправляем файл
-        await message.answer_document(types.FSInputFile(result_path))
-        
     except Exception as e:
         logging.error(f"Ошибка: {e}")
-        await message.answer("Ошибка при обработке. Попробуй другое фото.")
+        await message.answer(f"Ошибка при обработке: {e}")
 
 async def main():
     # Запуск веб-сервера
