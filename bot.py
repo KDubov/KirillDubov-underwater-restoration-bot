@@ -34,12 +34,6 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 gs_client = gspread.authorize(creds)
 sheet = gs_client.open_by_key("1OUxcrDV2cvheOqv__7Y9h_soHuqt7zsf3k91Qg38c5E").sheet1
 
-# Тестовая команда, чтобы проверить, работает ли код
-@dp.message(Command("ping"))
-async def ping(message: types.Message):
-    await message.answer("pong! Бот работает, команды обновлены.")
-# Конец тестовой команды
-
 def log_to_sheet(user_id, username, filename):
     try:
         sheet.append_row([str(datetime.now()), str(user_id), str(username), str(filename)])
@@ -53,7 +47,6 @@ async def process_image(message: types.Message, file_id: str, original_filename:
     user = message.from_user
     log_to_sheet(user.id, user.full_name, original_filename)
     
-    # Отправляем статус и сохраняем его ID для последующего удаления
     status_msg = await message.answer("⏳ Обрабатываю... ~30–60 сек")
     
     unique_id = uuid.uuid4().hex
@@ -71,16 +64,13 @@ async def process_image(message: types.Message, file_id: str, original_filename:
             types.FSInputFile(local_output, filename=final_name),
             caption="✅ Готово!"
         )
-        
-        # Удаляем сообщение с индикатором прогресса для чистоты чата
         await bot.delete_message(chat_id=message.chat.id, message_id=status_msg.message_id)
         
     except Exception as e:
         logging.error(f"Ошибка обработки: {e}")
-        # Оповещаем администратора об ошибке
-        if os.environ.get("ADMIN_CHAT_ID"):
+        if ADMIN_CHAT_ID:
             await bot.send_message(
-                os.environ.get("ADMIN_CHAT_ID"), 
+                ADMIN_CHAT_ID, 
                 f"⚠️ **Ошибка у пользователя {user.full_name} (@{user.username}):**\n{str(e)}"
             )
         await message.answer("❌ Произошла ошибка при обработке фото. Попробуй позже.")
@@ -96,36 +86,38 @@ async def cmd_start(message: types.Message):
         "(📎скрепка → 📄Файл), а не как обычное фото.",
         parse_mode="Markdown"
     )
+
 @dp.message(Command("getid"))
 async def get_id(message: types.Message):
     await message.answer(f"ID этого чата: {message.chat.id}")
 
+@dp.message(Command("clear"))
+async def cmd_clear(message: types.Message):
+    # Удаляем сообщение с командой
+    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    # Удаляем до 10 предыдущих сообщений
+    for i in range(1, 11):
+        try:
+            await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id - i)
+        except:
+            break
+    await message.answer("✅ История чата очищена!", disable_notification=True)
+
 @dp.message(Command("feedback"))
 async def feedback_start(message: types.Message):
-    await message.answer("Пришли текст отзыва или жалобы в следующем сообщении.")
-
-@dp.message(F.text, ~F.text.startswith("/"))
-async def process_feedback(message: types.Message):
-    if ADMIN_CHAT_ID:
-        await bot.send_message(
-            ADMIN_CHAT_ID, 
-            f"📩 **Новый отзыв!**\n\nОт: {message.from_user.full_name} (@{message.from_user.username})\nID: {message.from_user.id}\n\nТекст: {message.text}"
-        )
-        await message.answer("✅ Спасибо! Твой отзыв отправлен разработчику.")
+    await message.answer("Пожалуйста, опиши проблему или предложение, и я отправлю это разработчику.")
 
 @dp.message(Command("stats"))
 async def cmd_stats(message: types.Message):
-    # Тут можно считать количество строк в Google Sheets
-    count = len(sheet.get_all_values()) - 1 
-    await message.answer(f"📊 Всего обработано фото: {count}")
+    try:
+        count = len(sheet.get_all_values()) - 1 
+        await message.answer(f"📊 Всего обработано фото: {count}")
+    except Exception as e:
+        await message.answer("Не удалось получить статистику.")
 
-# Обработка альбомов
 @dp.message(F.media_group_id)
 async def handle_media_group(message: types.Message):
-    await message.answer(
-        "⚠️ Пожалуйста, присылай фотографии **по одной**, чтобы я смог качественно их восстановить.",
-        parse_mode="Markdown"
-    )
+    await message.answer("⚠️ Пожалуйста, присылай фотографии **по одной**.", parse_mode="Markdown")
     
 @dp.message(F.document)
 async def handle_document(message: types.Message):
@@ -143,10 +135,6 @@ async def handle_photo(message: types.Message):
 
 async def on_startup(bot: Bot):
     await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
-
-@dp.message(Command("getid"))
-async def get_id(message: types.Message):
-    await message.answer(f"ID этого чата: {message.chat.id}")
 
 async def main():
     app = web.Application()
