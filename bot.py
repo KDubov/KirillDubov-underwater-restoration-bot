@@ -93,9 +93,7 @@ async def get_id(message: types.Message):
 
 @dp.message(Command("clear"))
 async def cmd_clear(message: types.Message):
-    # Удаляем сообщение с командой
     await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-    # Удаляем до 10 предыдущих сообщений
     for i in range(1, 11):
         try:
             await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id - i)
@@ -103,9 +101,26 @@ async def cmd_clear(message: types.Message):
             break
     await message.answer("✅ История чата очищена!", disable_notification=True)
 
+# ИСПРАВЛЕННАЯ ФУНКЦИЯ FEEDBACK
 @dp.message(Command("feedback"))
-async def feedback_start(message: types.Message):
-    await message.answer("Пожалуйста, опиши проблему или предложение, и я отправлю это разработчику.")
+async def feedback_command(message: types.Message):
+    text = message.text.replace("/feedback", "").strip()
+    
+    if not text:
+        await message.answer("Используй команду так: /feedback [твой отзыв]")
+        return
+
+    admin_id = os.environ.get("ADMIN_CHAT_ID")
+    if admin_id:
+        try:
+            await bot.send_message(
+                admin_id, 
+                f"📩 **Отзыв от {message.from_user.full_name} (@{message.from_user.username}):**\n\n{text}"
+            )
+            await message.answer("✅ Спасибо! Твой отзыв отправлен разработчику.")
+        except Exception as e:
+            logging.error(f"Ошибка при отправке отзыва: {e}")
+            await message.answer("❌ Ошибка при отправке отзыва.")
 
 @dp.message(Command("stats"))
 async def cmd_stats(message: types.Message):
