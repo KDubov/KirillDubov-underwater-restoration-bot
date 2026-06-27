@@ -10,12 +10,12 @@ def setup_handlers(dp, bot, logger):
 
     @dp.message(F.text == "/start")
     async def start(message: Message):
-        await message.answer("Работаю ✔ отправь фото")
+        await message.answer("Отправь фото")
 
     @dp.message(F.photo)
     async def photo(message: Message):
         try:
-            await message.answer("Получил фото, обрабатываю...")
+            await message.answer("Обрабатываю фото...")
 
             photo = message.photo[-1]
             file = await bot.get_file(photo.file_id)
@@ -23,17 +23,19 @@ def setup_handlers(dp, bot, logger):
             path = f"/tmp/{uuid.uuid4()}.jpg"
             await bot.download_file(file.file_path, destination=path)
 
+            # 🔥 ВАЖНО: твой Space + правильный endpoint
             client = Client(HF_SPACE)
-
-            await message.answer("Отправляю в HuggingFace...")
 
             result = client.predict(
                 handle_file(path),
-                api_name="/predict"
+                api_name="/enhance"   # 👈 ВОТ ЭТО ГЛАВНОЕ ИЗМЕНЕНИЕ
             )
 
-            await message.answer(f"HF RESULT: {result}")
+            await message.answer("Готово ✔ отправляю результат...")
+
+            # result = путь к файлу
+            await message.answer_photo(result)
 
         except Exception as e:
-            await message.answer(f"ERROR: {e}")
+            await message.answer(f"Ошибка: {e}")
             logger.error(e)
