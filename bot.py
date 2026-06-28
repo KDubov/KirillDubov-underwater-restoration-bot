@@ -5,7 +5,9 @@ import json
 import uuid
 import shutil
 import gspread
+
 from aiogram import Bot, Dispatcher, types, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
@@ -95,24 +97,36 @@ async def get_id(message: types.Message):
 
 @dp.message(Command("clear"))
 async def cmd_clear(message: types.Message):
-    # ID сообщения с командой /clear
-    current_message_id = message.message_id
+    current_id = message.message_id
+    chat_id = message.chat.id
     
-    # Удаляем само сообщение с командой
-    await bot.delete_message(chat_id=message.chat.id, message_id=current_message_id)
-    
-    # Пытаемся удалять сообщения по одному, двигаясь назад в истории
-    # В Telegram лимит удаления составляет обычно около 100 сообщений подряд
-    # за короткий промежуток времени.
-    for i in range(1, 100): 
+    # Сначала удалим само сообщение с командой /clear
+    try:
+        await message.delete()
+    except TelegramBadRequest:
+        pass
+
+    # Собираем пачки по 100 ID (максимум для метода deleteMessages)
+    # Пройдемся, например, на 150 сообщений назад двумя пачками
+    for chunk in [range(1, 100), range(100, 151)]:
+        message_ids_to_delete = []
+        
+        for i in chunk:
+            # Вычисляем потенциальные ID предыдущих сообщений
+            message_ids_to_delete.append(current_id - i)
+        
+        # Удаляем всю пачку одним запросом
         try:
-            await bot.delete_message(chat_id=message.chat.id, message_id=current_message_id - i)
-        except Exception:
-            # Если сообщение не найдено (удалено) или мы дошли до начала чата,
-            # выходим из цикла
-            break
-            
-    await message.answer("✅ Чат полностью очищен!", disable_notification=True)
+            await bot.delete_messages(chat_id=chat_id, message_ids=message_ids_to_delete)
+        except TelegramBadRequest:
+            # Если в пачке есть старые (>48ч) или несуществующие сообщения,
+            # Telegram Bot API может ругнуться, поэтому на случай сбоя пачки 
+            # удалим их поштучно с пропуском ошибок
+            for msg_id in message_ids_to_delete:
+                try:
+                    await bot.delete_message(chat_id=chat_id, message_id=msg_id)
+                except TelegramBadRequest:
+                    continue
 
 # ИСПРАВЛЕННАЯ ФУНКЦИЯ FEEDBACK
 @dp.message(Command("feedback"))
