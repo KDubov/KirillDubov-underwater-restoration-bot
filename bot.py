@@ -10,6 +10,8 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from aiohttp import web
 from gradio_client import Client, handle_file
 from oauth2client.service_account import ServiceAccountCredentials
@@ -128,26 +130,47 @@ async def cmd_clear(message: types.Message):
                 except TelegramBadRequest:
                     continue
 
-# ИСПРАВЛЕННАЯ ФУНКЦИЯ FEEDBACK
+class FeedbackStates(StatesGroup):
+    waiting_for_feedback_text = State()
+
+# 1. Хэндлер на саму команду /feedback
 @dp.message(Command("feedback"))
-async def feedback_command(message: types.Message):
-    text = message.text.replace("/feedback", "").strip()
+async def cmd_feedback(message: types.Message, state: FSMContext):
+    await message.answer("📝 Напишите ваше сообщение или отзыв разработчику:")
+    # Переводим пользователя в состояние ожидания текста
+    await state.set_state(FeedbackStates.waiting_for_feedback_text)
+
+# 2. Хэндлер, который поймает СЛЕДУЮЩЕЕ сообщение пользователя
+@dp.message(FeedbackStates.waiting_for_feedback_text)
+async def process_feedback_text(message: types.Message, state: FSMContext):
+    # ADMIN_CHAT_ID должен быть определен в ваших переменных окружения
+    admin_chat_id = os.getenv("ADMIN_CHAT_ID") 
     
-    if not text:
-        await message.answer("Используй команду так: /feedback [твой отзыв]")
+    if not admin_chat_id:
+        await message.answer("❌ Ошибка: чат поддержки не настроен. Попробуйте позже.")
+        await state.clear() # Сбрасываем состояние в случае ошибки
         return
 
-    admin_id = os.environ.get("ADMIN_CHAT_ID")
-    if admin_id:
-        try:
-            await bot.send_message(
-                admin_id, 
-                f"📩 **Отзыв от {message.from_user.full_name} (@{message.from_user.username}):**\n\n{text}"
-            )
-            await message.answer("✅ Спасибо! Твой отзыв отправлен разработчику.")
-        except Exception as e:
-            logging.error(f"Ошибка при отправке отзыва: {e}")
-            await message.answer("❌ Ошибка при отправке отзыва.")
+    # Формируем красивый текст для группы админа
+    feedback_delivery_text = (
+        f"📩 **Новый отзыв!**\n"
+        f"👤 От: {message.from_user.full_name} (@{message.from_user.username or 'нет_юзернейма'})\n"
+        f"🆔 ID: `{message.from_user.id}`\n"
+        f"---------------------\n"
+        f"{message.text}"
+    )
+
+    try:
+        # Отправляем сообщение в вашу группу обратной связи
+        await bot.send_message(chat_id=admin_chat_id, text=feedback_delivery_text, parse_mode="Markdown")
+        # Отвечаем пользователю
+        await message.answer("✅ Сообщение отправлено. Благодарим вас за обратную связь!")
+    except Exception as e:
+        await message.answer("❌ Не удалось отправить сообщение. Попробуйте позже.")
+        print(f"Ошибка отправки фидбека: {e}")
+    
+    # КРИТИЧЕСКИ ВАЖНО: сбрасываем состояние, чтобы бот снова реагировал на обычные команды и фото
+    await state.clear()
 
 @dp.message(Command("stats"))
 async def cmd_stats(message: types.Message):
