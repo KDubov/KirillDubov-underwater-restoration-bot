@@ -143,33 +143,33 @@ async def cmd_feedback(message: types.Message, state: FSMContext):
 # 2. Хэндлер, который поймает СЛЕДУЮЩЕЕ сообщение пользователя
 @dp.message(FeedbackStates.waiting_for_feedback_text)
 async def process_feedback_text(message: types.Message, state: FSMContext):
-    # ADMIN_CHAT_ID должен быть определен в ваших переменных окружения
     admin_chat_id = os.getenv("ADMIN_CHAT_ID") 
     
     if not admin_chat_id:
         await message.answer("❌ Ошибка: чат поддержки не настроен. Попробуйте позже.")
-        await state.clear() # Сбрасываем состояние в случае ошибки
+        await state.clear()
         return
 
-    # Формируем красивый текст для группы админа
+    # Переделываем разметку на безопасный HTML
+    username = f"@{message.from_user.username}" if message.from_user.username else "нет юзернейма"
+    
     feedback_delivery_text = (
-        f"📩 **Новый отзыв!**\n"
-        f"👤 От: {message.from_user.full_name} (@{message.from_user.username or 'нет_юзернейма'})\n"
-        f"🆔 ID: `{message.from_user.id}`\n"
+        f"📩 <b>Новый отзыв!</b>\n"
+        f"👤 От: {message.from_user.full_name} ({username})\n"
+        f"🆔 ID: <code>{message.from_user.id}</code>\n"
         f"---------------------\n"
         f"{message.text}"
     )
 
     try:
-        # Отправляем сообщение в вашу группу обратной связи
-        await bot.send_message(chat_id=admin_chat_id, text=feedback_delivery_text, parse_mode="Markdown")
-        # Отвечаем пользователю
+        # Используем HTML вместо Markdown
+        await bot.send_message(chat_id=admin_chat_id, text=feedback_delivery_text, parse_mode="HTML")
         await message.answer("✅ Сообщение отправлено. Благодарим вас за обратную связь!")
     except Exception as e:
-        await message.answer("❌ Не удалось отправить сообщение. Попробуйте позже.")
-        print(f"Ошибка отправки фидбека: {e}")
+        # Если снова упадет, мы увидим в логах Render точную причину
+        print(f"КРИТИЧЕСКАЯ ОШИБКА ФИДБЕКА: {e}")
+        await message.answer(f"❌ Не удалось отправить сообщение. Ошибка: {e}")
     
-    # КРИТИЧЕСКИ ВАЖНО: сбрасываем состояние, чтобы бот снова реагировал на обычные команды и фото
     await state.clear()
 
 @dp.message(Command("stats"))
