@@ -95,13 +95,24 @@ async def get_id(message: types.Message):
 
 @dp.message(Command("clear"))
 async def cmd_clear(message: types.Message):
-    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-    for i in range(1, 11):
+    # ID сообщения с командой /clear
+    current_message_id = message.message_id
+    
+    # Удаляем само сообщение с командой
+    await bot.delete_message(chat_id=message.chat.id, message_id=current_message_id)
+    
+    # Пытаемся удалять сообщения по одному, двигаясь назад в истории
+    # В Telegram лимит удаления составляет обычно около 100 сообщений подряд
+    # за короткий промежуток времени.
+    for i in range(1, 100): 
         try:
-            await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id - i)
-        except:
+            await bot.delete_message(chat_id=message.chat.id, message_id=current_message_id - i)
+        except Exception:
+            # Если сообщение не найдено (удалено) или мы дошли до начала чата,
+            # выходим из цикла
             break
-    await message.answer("✅ История чата очищена!", disable_notification=True)
+            
+    await message.answer("✅ Чат полностью очищен!", disable_notification=True)
 
 # ИСПРАВЛЕННАЯ ФУНКЦИЯ FEEDBACK
 @dp.message(Command("feedback"))
